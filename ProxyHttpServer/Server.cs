@@ -32,6 +32,7 @@ namespace ProxyHttpServer {
         readonly List<string> _disableAddressList = new List<string>();
 
         readonly LimitUrl _limitUrl;//URL制限
+        readonly LimitSrcProg _limitSrcProg;//アクセス元プログラム制限
         readonly LimitString _limitString;//コンテンツ制限
 
         //リクエストを通常ログで表示する
@@ -65,6 +66,10 @@ namespace ProxyHttpServer {
             }
             _limitUrl = new LimitUrl(allow,deny);
 
+            //アクセス元プログラム制限
+            var allowProg = (Dat)Conf.Get("limitSrcProgAllow");
+            var denyProg = (Dat)Conf.Get("limitSrcProgDeny");
+            _limitSrcProg = new LimitSrcProg(this.Logger, allowProg, denyProg);
             
             //リクエストを通常ログで表示する
             _useRequestLog = (bool)Conf.Get("useRequestLog");
@@ -126,6 +131,12 @@ namespace ProxyHttpServer {
         }
         //接続単位の処理
         override protected void OnSubThread(SockObj sockObj) {
+
+            string errorStr = "";
+            if (!_limitSrcProg.IsAllow(sockObj, ref errorStr)) {
+                Logger.Set(LogKind.Normal, null, 10, errorStr);
+                return;
+            }
 
             //Ver5.6.9
             //UpperProxy upperProxy = new UpperProxy((bool)Conf.Get("useUpperProxy"),(string)this.Conf.Get("upperProxyServer"),(int)this.Conf.Get("upperProxyPort"),disableAddressList);

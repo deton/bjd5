@@ -29,6 +29,8 @@ namespace ProxyHttpServer {
             pageList.Add(Page5(key, Lang.Value(key), kernel));
             key = "LimitContents";
             pageList.Add(Page6(key, Lang.Value(key), kernel));
+            key = "LimitSrcProg";
+            pageList.Add(Page7(key, Lang.Value(key), kernel));
             pageList.Add(PageAcl());
             Add(new OneVal("tab", null, Crlf.Nextline, new CtrlTabPage("tabPage", pageList)));
 
@@ -154,6 +156,21 @@ namespace ProxyHttpServer {
             l.Add(new OneVal(key, "", Crlf.Nextline, new CtrlTextBox(Lang.Value(key), 50)));
             key = "limitString";
             onePage.Add(new OneVal(key, null, Crlf.Nextline, new CtrlDat(Lang.Value(key), l, 300, Lang.LangKind)));
+            return onePage;
+        }
+        private OnePage Page7(string name, string title, Kernel kernel){
+            var onePage = new OnePage(name, title);
+            var list1 = new ListVal();
+            var key = "allowProg";
+            list1.Add(new OneVal(key, "", Crlf.Nextline, new CtrlTextBox(Lang.Value(key), 50)));
+            key = "limitSrcProgAllow";
+            onePage.Add(new OneVal(key, null, Crlf.Nextline, new CtrlDat(Lang.Value(key), list1, 185, Lang.LangKind)));
+            var list2 = new ListVal();
+            key = "denyProg";
+            list2.Add(new OneVal(key, "", Crlf.Nextline, new CtrlTextBox(Lang.Value(key), 50)));
+            key = "limitSrcProgDeny";
+            onePage.Add(new OneVal(key, null, Crlf.Nextline, new CtrlDat(Lang.Value(key), list2, 185, Lang.LangKind)));
+
             return onePage;
         }
 
