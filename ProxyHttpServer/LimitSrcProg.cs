@@ -8,8 +8,7 @@ using System.Diagnostics;
 using Bjd.log;
 using Bjd.option;
 using Bjd.sock;
-using System.Management;
-using System.Linq;
+using System.Net;
 
 namespace ProxyHttpServer {
     //アクセス元プログラム制限
@@ -24,8 +23,10 @@ namespace ProxyHttpServer {
         readonly Logger _logger;
         readonly List<string> _allowList = new List<string>();
         readonly List<string> _denyList = new List<string>();
+        IPAddress[] localIPs;
 
         public LimitSrcProg(Logger logger, IEnumerable<OneDat> allow, IEnumerable<OneDat> deny) {
+            localIPs = Dns.GetHostAddresses(Dns.GetHostName());
             _logger = logger;
             foreach (var o in allow) {
                 if (o.Enable) { //有効なデータだけを対象にする
@@ -40,8 +41,12 @@ namespace ProxyHttpServer {
         }
 
         public bool IsAllow(SockObj sockObj, ref string error) {
+            if (!IsLocalIpAddress(sockObj.LocalAddress.Address)) {
+                //localhost上でない場合、アクセス元プログラム名取得は未対応
+                return true;
+            }
             string progname = GetSrcProg(sockObj);
-            _logger.Set(LogKind.Debug, null, 999, string.Format("progname={0}", progname));
+            _logger.Set(LogKind.Debug, null, 999, string.Format("limitSrcProg:{0}", progname));
             if (_allowList.Contains(progname)) {
                 //allowでヒットした場合は、常にALLOW
                 error = string.Format("AllowProg={0}", progname);
@@ -60,6 +65,23 @@ namespace ProxyHttpServer {
             //Denyだけ設定されている場合
             //両方設定されている場合
             return true;//ALLOW
+        }
+
+        // http://www.csharp-examples.net/local-ip/
+        private bool IsLocalIpAddress(IPAddress ip) {
+            try {
+                if (IPAddress.IsLoopback(ip)) {
+                    return true;
+                }
+                foreach (IPAddress localIP in localIPs) {
+                    if (ip.Equals(localIP)) {
+                        return true;
+                    }
+                }
+                //(BJD.net.LocalAddress でやる方がいいかも)
+            }
+            catch { }
+            return false;
         }
 
         // acquire progname from source port of sockObj
@@ -116,8 +138,7 @@ namespace ProxyHttpServer {
                                             typeof(MIB_TCPTABLE_OWNER_PID));
                     IntPtr tableRowPtr = (IntPtr)((long)tcpTableRecordsPtr +
                                             Marshal.SizeOf(tcpRecordsTable.dwNumEntries));
-                    // Reading and parsing the TCP records one by one from the table and
-                    // storing them in a list of 'TcpProcessRecord' structure type objects.
+                    // Reading and parsing the TCP records one by one from the table
                     for (int row = 0; row < tcpRecordsTable.dwNumEntries; row++) {
                         MIB_TCPROW_OWNER_PID tcpRow = (MIB_TCPROW_OWNER_PID)Marshal.
                             PtrToStructure(tableRowPtr, typeof(MIB_TCPROW_OWNER_PID));
@@ -148,27 +169,12 @@ namespace ProxyHttpServer {
             } catch (Exception exception) {
                 _logger.Set(LogKind.Error, null, 9000038, exception.Message);
                 // WSL内プロセスの場合、MainModule参照時に
-                // "アクセスが拒否されました"例外。以下のwmiQueryでも取得不可
+                // "アクセスが拒否されました"例外
 
-                /*
-                // https://stackoverflow.com/questions/9501771/how-to-avoid-a-win32-exception-when-accessing-process-mainmodule-filename-in-c
-                string wmiQueryString = "SELECT ProcessId, ExecutablePath FROM Win32_Process WHERE ProcessId = " + pid;
-                using (var searcher = new ManagementObjectSearcher(wmiQueryString)) {
-                    using (var results = searcher.Get()) {
-                        ManagementObject mo = results.Cast<ManagementObject>().FirstOrDefault();
-                        if (mo != null) {
-                            string path = (string)mo["ExecutablePath"];
-                            if (path != null) {
-                                return path;
-                            }
-                        }
-                    }
-                }
-                */
+                // XXX: ProcessNameは実行ファイル名を変更すれば
+                // 容易に変更可能なので、制限を簡単に抜けられる
+                return proc.ProcessName;
             }
-            // XXX: ProcessNameは実行ファイル名を変更すれば
-            // 容易に変更可能なので、制限を簡単に抜けられる
-            return proc.ProcessName;
         }
     }
 
