@@ -8,6 +8,8 @@ using System.Diagnostics;
 using Bjd.log;
 using Bjd.option;
 using Bjd.sock;
+using System.Management;
+using System.Linq;
 
 namespace ProxyHttpServer {
     //アクセス元プログラム制限
@@ -61,8 +63,7 @@ namespace ProxyHttpServer {
         }
 
         // acquire progname from source port of sockObj
-        private string GetSrcProg(SockObj sockObj)
-        {
+        private string GetSrcProg(SockObj sockObj) {
             int port = sockObj.RemoteAddress.Port;
             int af = AF_INET;
             if (sockObj.LocalAddress.AddressFamily == AddressFamily.InterNetworkV6) {
@@ -78,8 +79,7 @@ namespace ProxyHttpServer {
             // specified number of bytes in 'bufferSize' variable.
             IntPtr tcpTableRecordsPtr = Marshal.AllocHGlobal(bufferSize);
 
-            try
-            {
+            try {
                 // The size of the table returned in 'bufferSize' variable in previous
                 // call must be used in this subsequent call to 'GetExtendedTcpTable'
                 // function in order to successfully retrieve the table.
@@ -99,17 +99,14 @@ namespace ProxyHttpServer {
                                             typeof(MIB_TCP6TABLE_OWNER_PID));
                     IntPtr tableRowPtr = (IntPtr)((long)tcpTableRecordsPtr +
                                             Marshal.SizeOf(tcpRecordsTable.dwNumEntries));
-                    for (int row = 0; row < tcpRecordsTable.dwNumEntries; row++)
-                    {
+                    for (int row = 0; row < tcpRecordsTable.dwNumEntries; row++) {
                         MIB_TCP6ROW_OWNER_PID tcpRow = (MIB_TCP6ROW_OWNER_PID)Marshal.
                             PtrToStructure(tableRowPtr, typeof(MIB_TCP6ROW_OWNER_PID));
                         ushort p = BitConverter.ToUInt16(new byte[2] {
                                     tcpRow.localPort[1],
                                     tcpRow.localPort[0] }, 0);
                         if (p == port) {
-                            int pid = tcpRow.owningPid;
-                            Process proc = Process.GetProcessById(pid);
-                            return proc.ProcessName;
+                            return GetMainModuleFilepath(tcpRow.owningPid);
                         }
                         tableRowPtr = (IntPtr)((long)tableRowPtr + Marshal.SizeOf(tcpRow));
                     }
@@ -121,8 +118,7 @@ namespace ProxyHttpServer {
                                             Marshal.SizeOf(tcpRecordsTable.dwNumEntries));
                     // Reading and parsing the TCP records one by one from the table and
                     // storing them in a list of 'TcpProcessRecord' structure type objects.
-                    for (int row = 0; row < tcpRecordsTable.dwNumEntries; row++)
-                    {
+                    for (int row = 0; row < tcpRecordsTable.dwNumEntries; row++) {
                         MIB_TCPROW_OWNER_PID tcpRow = (MIB_TCPROW_OWNER_PID)Marshal.
                             PtrToStructure(tableRowPtr, typeof(MIB_TCPROW_OWNER_PID));
                         ushort p = BitConverter.ToUInt16(new byte[2] {
@@ -130,15 +126,7 @@ namespace ProxyHttpServer {
                                     tcpRow.localPort[1],
                                     tcpRow.localPort[0] }, 0);
                         if (p == port) {
-                            int pid = tcpRow.owningPid;
-                            Process proc = Process.GetProcessById(pid);
-                            // XXX: ProcessNameは実行ファイル名を変更すれば
-                            // 容易に変更可能なので、制限を簡単に抜けられる
-                            return proc.ProcessName;
-                            // MainModule参照は"アクセスが拒否されました"例外。
-                            // (netstat -b同様に、管理者権限が必要?)
-                            //return proc.MainModule.FileName;
-                            //return proc.MainModule.ModuleName;
+                            return GetMainModuleFilepath(tcpRow.owningPid);
                         }
                         tableRowPtr = (IntPtr)((long)tableRowPtr + Marshal.SizeOf(tcpRow));
                     }
@@ -151,6 +139,36 @@ namespace ProxyHttpServer {
                 Marshal.FreeHGlobal(tcpTableRecordsPtr);
             }
             return "";
+        }
+
+        private string GetMainModuleFilepath(int pid) {
+            Process proc = Process.GetProcessById(pid);
+            try {
+                return proc.MainModule.FileName;
+            } catch (Exception exception) {
+                _logger.Set(LogKind.Error, null, 9000038, exception.Message);
+                // WSL内プロセスの場合、MainModule参照時に
+                // "アクセスが拒否されました"例外。以下のwmiQueryでも取得不可
+
+                /*
+                // https://stackoverflow.com/questions/9501771/how-to-avoid-a-win32-exception-when-accessing-process-mainmodule-filename-in-c
+                string wmiQueryString = "SELECT ProcessId, ExecutablePath FROM Win32_Process WHERE ProcessId = " + pid;
+                using (var searcher = new ManagementObjectSearcher(wmiQueryString)) {
+                    using (var results = searcher.Get()) {
+                        ManagementObject mo = results.Cast<ManagementObject>().FirstOrDefault();
+                        if (mo != null) {
+                            string path = (string)mo["ExecutablePath"];
+                            if (path != null) {
+                                return path;
+                            }
+                        }
+                    }
+                }
+                */
+            }
+            // XXX: ProcessNameは実行ファイル名を変更すれば
+            // 容易に変更可能なので、制限を簡単に抜けられる
+            return proc.ProcessName;
         }
     }
 
