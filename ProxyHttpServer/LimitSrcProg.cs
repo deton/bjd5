@@ -41,25 +41,27 @@ namespace ProxyHttpServer {
         }
 
         public bool IsAllow(SockObj sockObj, ref string error) {
-            if (!IsLocalIpAddress(sockObj.LocalAddress.Address)) {
+            string progname = "";
+            if (!IsLocalIpAddress(sockObj.RemoteAddress.Address)) {
                 //localhost上でない場合、アクセス元プログラム名取得は未対応
-                return true;
-            }
-            string progname = GetSrcProg(sockObj);
-            _logger.Set(LogKind.Debug, null, 999, string.Format("limitSrcProg:{0}", progname));
-            if (_allowList.Contains(progname)) {
-                //allowでヒットした場合は、常にALLOW
-                error = string.Format("AllowProg={0}", progname);
-                return true;
-            }
-            if (_denyList.Contains(progname)) {
-                //denyでヒットした場合は、常にDENY
-                error = string.Format("DenyProg={0}", progname);
-                return false;
+                progname = "SrcProg not supported for host other than localhost";
+            } else {
+                progname = GetSrcProg(sockObj);
+                _logger.Set(LogKind.Debug, null, 999, string.Format("limitSrcProg:{0}", progname));
+                if (_allowList.Contains(progname)) {
+                    //allowでヒットした場合は、常にALLOW
+                    error = string.Format("AllowProg={0}", progname);
+                    return true;
+                }
+                if (_denyList.Contains(progname)) {
+                    //denyでヒットした場合は、常にDENY
+                    error = string.Format("DenyProg={0}", progname);
+                    return false;
+                }
             }
             if (_denyList.Count == 0 && _allowList.Count > 0) {
                 //Allowだけ設定されている場合
-                error = string.Format("don't agree in an ALLOW Prog list {0}", progname);
+                error = string.Format("don't agree in an ALLOW Prog list. {0}", progname);
                 return false;//DENY
             }
             //Denyだけ設定されている場合
