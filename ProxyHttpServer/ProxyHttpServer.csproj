@@ -70,6 +70,7 @@
     </Compile>
     <Compile Include="HttpMethod.cs" />
     <Compile Include="HttpSideState.cs" />
+    <Compile Include="LimitSrcProg.cs" />
     <Compile Include="LimitString.cs" />
     <Compile Include="LimitUrl.cs" />
     <Compile Include="Log.cs" />

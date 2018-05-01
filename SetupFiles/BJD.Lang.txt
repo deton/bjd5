@@ -293,6 +293,7 @@ OptionProxyHttp_Cache1	キャッシュ(1)	Cache(1)
 OptionProxyHttp_Cache2	キャッシュ(2)	Cache(2)
 OptionProxyHttp_LimitUrl	ＵＲＬ制限	URL Restriction
 OptionProxyHttp_LimitContents	コンテンツ制限	Contents restriction
+OptionProxyHttp_LimitSrcProg	アクセス元プログラム制限	Source program restriction
 
 # Page1(基本設定)
 
@@ -361,6 +362,14 @@ OptionProxyHttp_limitUrlDeny	制限するURL	Deny these URL
 
 OptionProxyHttp_string	文字列	String
 OptionProxyHttp_limitString	次の文字列を含むアクセスを制限する	Deny access if the content contains these strings
+
+# Page7(アクセス元プログラム制限)
+
+OptionProxyHttp_allowProg	プログラム名	Program name
+OptionProxyHttp_limitSrcProgAllow	許可するプログラム	Allow these programs
+
+OptionProxyHttp_denyProg	プログラム名	Program name
+OptionProxyHttp_limitSrcProgDeny	制限するプログラム	Deny these programs
 
 #Message
 
