@@ -53,6 +53,15 @@ BJD.exe起動後、「オプション」→「プロキシサーバ」→「ブ�
 を実行。フルパスは、
 `C:\Program Files\Git\mingw64\bin\curl.exe`
 
+### TODO
+* proxyリクエストを受けた時に、許可するかダイアログ表示して選択可能にする。
+* 常に許可/禁止、以外の設定を可能にする。
+  * 今回だけ許可
+  * 今から5分以内のみ許可
+  * 今から1時間は禁止
+* リクエスト元の親プロセスまでチェックする。
+  HTTPリクエストをcurl等を使って行うプロセスに対応できるようにするため。
+
 ### 参考: BlackJumboDog変更以外の実現方法案
 * [.NET Core CLR版BlackJumboDog](https://github.com/darkcrash/bjd5)
 * [Windows用Squid](http://squid.diladele.com/)
@@ -67,8 +76,9 @@ BJD.exe起動後、「オプション」→「プロキシサーバ」→「ブ�
   外部コマンドに接続元ポート番号を渡す方法を見つけられなかったので見送り。
 
 ## 参考
-* Windows用ローカルプロキシ: [認証プロキシ爆発しろ！](http://ipponshimeji.cocolog-nifty.com/blog/2017/01/post-0ce6.html)
+* [Windowsファイアウォールでアウトバンド通信をブロックする](http://www.atmarkit.co.jp/fwin2k/win2ktips/892vistafwout/vistafwout.html)。送信の規則
 * [LuLu - 外向きのネットワークトラフィックを監視するファイアウォール](https://www.moongift.jp/2018/02/lulu-%e5%a4%96%e5%90%91%e3%81%8d%e3%81%ae%e3%83%8d%e3%83%83%e3%83%88%e3%83%af%e3%83%bc%e3%82%af%e3%83%88%e3%83%a9%e3%83%95%e3%82%a3%e3%83%83%e3%82%af%e3%82%92%e7%9b%a3%e8%a6%96%e3%81%99%e3%82%8b/)
+* Windows用ローカルプロキシ。自動設定: [認証プロキシ爆発しろ！](http://ipponshimeji.cocolog-nifty.com/blog/2017/01/post-0ce6.html)
 
 ## License
 [Apache License Version 2.0](LICENSE)
